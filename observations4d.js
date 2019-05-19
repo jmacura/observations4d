@@ -10,8 +10,6 @@
 'use strict';
 
 //global variables
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4MGExNDZiMi00NDAwLTQ1NGMtOTY4Mi01NWYwNmI1OTE3OTgiLCJpZCI6NTE4NCwic2NvcGVzIjpbImFzciIsImdjIl0sImlhdCI6MTU0MjY1Nzg5M30.LiC7Odu155lrYB8ckNEE83UxkWCQbKbCkEM7nlWPf_0';
-Cesium.MapboxApi.defaultAccessToken = 'pk.eyJ1IjoieWptIiwiYSI6ImNqdmpnbGYyMDA3ejc0YnJpaml2NWtuaW0ifQ.AhR5rB20QKj5F6YHLgDfQA';
 var tMin = Infinity;
 var tMax = -Infinity;
 var startDate;
@@ -21,14 +19,13 @@ var endDate;
 /**
  * getBaseHeight - A hook to position the rooms to the right height
  * needs to be changed manually for another building
- *  
+ *
  * @param  {String} modelName ID of the room
  * @return {Number}           base height of this room
  */
 function getBaseHeight(modelName) {
   let lvlBaseHeights = [0.46, 3.25, 8.07, 12.53, 15.87, 19.21, 22.55];
   let lvl = (modelName[2] != "W") ? modelName[2] : modelName[3]; //ternary because of the UNW.. IDs
-  //console.log(lvl);
   return lvlBaseHeights[lvl];
 }
 
@@ -50,7 +47,6 @@ function readKml(objectName) {
         type: 'GET',
         async: true
       }).done((data, stat) => {
-        //console.log("noerror");
         let location = data.getElementsByTagName("Location")[0];
         resolve([location.children[0].firstChild.data, location.children[1].firstChild.data, location.children[2].firstChild.data]);
       }).fail((error) => {
@@ -74,7 +70,6 @@ function readOM(objectName) {
         async: true,
         crossDomain: true
       }).done((data, stat) => {
-        //console.log("noerror");
         resolve(data);
       }).fail((error) => {
         console.log("Error! Loading O&M file of sensor ID '" + objectName + "' was unsuccessful.");
@@ -116,16 +111,14 @@ function setTimeTempVars(obs) {
 * all asynchronous requests fullfills
 */
 function readObservations(dataSource, zoneList) {
-  //console.log(dataSource.entities.values.length);
   return new Promise((resolve, reject) => {
     resolve(Promise.all(
       zoneList.map(entity => {
         let id = entity.name;
         return readOM(id).then((data) => {
-          //console.log("fuj");
           setTimeTempVars(data);
           let czml = generateCzmlUpdate(data);
-          //console.log("obser:", dataSource.entities.values.length);
+          //console.log("obser:", czml);
           return dataSource.process(czml);
         }).catch(err => console.log("inall:", err));
       })
@@ -144,18 +137,14 @@ function readObservations(dataSource, zoneList) {
  */
 function generateCzmlItem(item) {
   let hpr = new Cesium.HeadingPitchRoll(Cesium.Math.PI_OVER_TWO, 0, 0); // Collada uses different axis definition then Cesium
-  let origin = Cesium.Cartesian3.fromDegrees(13.351798339078506, 49.726704604699599); //wtf????????????
+  let origin = Cesium.Cartesian3.fromDegrees(13.351798339078506, 49.726704604699599); //wtf?
   let uq = Cesium.Transforms.headingPitchRollQuaternion(origin, hpr);
-  //uq = Cesium.Quaternion.fromHeadingPitchRoll(hpr);
-  //console.log(uq);
   let id = item.split(".")[0];
   return readKml(item).then((coords) => {
-    //console.log(coords);
-    //console.log(lvlBaseHeights[lvl]);
     return {
       "id" : id,
       "name" : id,
-      //TODO: zkusit
+      //TODO: may this change something?
       /*"clock":{
         "interval":"2012-03-15T10:00:00Z/2012-03-16T10:00:00Z",
         "currentTime":"2012-03-15T10:00:00Z",
@@ -207,7 +196,7 @@ function getZoneList() {
   });
 }
 
-//TODO: menit spojite
+//TODO: continuous or interval-based?
 function colorize(t) {
   let interval = (tMax-tMin)/4;
   if (t < (tMin + interval)) {
@@ -270,11 +259,7 @@ function setViewer() {
     e.cancel = true;
     viewer.scene.camera.flyTo(homeCameraView);
   });
-  //infobox
   drawLegend();
-  //viewer.infoBox.viewModel.titleText = "SHIT";
-  //viewer.infoBox.viewModel.description = "Lorem Ipsum Dolor Sit Amet";
-  //viewer.infoBox.viewModel.showInfo = true;
   //viewer.shadows = false;
   //viewer.scene.globe.enableLighting = false;
   //viewer.shadowMap.enabled = false;
@@ -295,7 +280,6 @@ function drawLegend() {
     $(legendBox).addClass("legendBox");
     let color = 'rgb(' + reds[i] + ', ' + greens[i]  + ', ' + blues[i] + ', 0.6)';
     $(legendBox).css({"background": color});
-    //$(legendBox).text("&emsp;&emsp;");
     let legendText = document.createElement("TD");
     if (i > 0) {
       $(legendText).text(htmlDecode("&emsp;") + (tMin+(i-1)*interval).toFixed(1) + htmlDecode("&ndash;") + (tMin+i*interval).toFixed(1) + " °C");
@@ -304,17 +288,8 @@ function drawLegend() {
     }
     let tr = $('<tr></tr>');
     $(tr).append(legendBox);
-    //$(tr).append(legendBox);
     $(tr).append(legendText);
     $(tbody).append(tr);
-    /*return new Cesium.Color(0.2, 0.5, 0.7, 0.6);
-  } else if (t < (tMin + interval * 2)) {
-    return new Cesium.Color(0.3, 0.5, 0.5, 0.6);
-  } else if (t < (tMin + interval * 3)) {
-    return new Cesium.Color(0.7, 0.5, 0.2, 0.6);
-  } else {
-    return new Cesium.Color(0.9, 0.3, 0.1, 0.6);
-  }*/
   }
 }
 
@@ -347,12 +322,11 @@ function loadZones(zones) {
     resolve(Promise.all(
       zones.map((zone) => {
         return generateCzmlItem(zone.name).then(czmlItem => {
-            //console.log(czmlItem);
+            console.log(czmlItem);
           return dataSource.process(czmlItem);
         }).catch(err => console.log("inall:", err));
       })
       ).then((res) => {
-        //console.log("res", res)
         return dataSource;
       }).catch(err => console.log("outall:", err))
     );}

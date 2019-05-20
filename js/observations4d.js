@@ -260,6 +260,7 @@ function setViewer() {
     viewer.scene.camera.flyTo(homeCameraView);
   });
   drawLegend();
+  //Cesium.CreditDisplay.cesiumCredit.addCredit("Ateliér Soukup Opl Švehla s. r. o."); //broken in Ces1.57
   //viewer.shadows = false;
   //viewer.scene.globe.enableLighting = false;
   //viewer.shadowMap.enabled = false;
@@ -322,7 +323,7 @@ function loadZones(zones) {
     resolve(Promise.all(
       zones.map((zone) => {
         return generateCzmlItem(zone.name).then(czmlItem => {
-            console.log(czmlItem);
+          //console.log(czmlItem);
           return dataSource.process(czmlItem);
         }).catch(err => console.log("inall:", err));
       })

@@ -10,13 +10,15 @@
 */
 
 'use strict';
-var http = require('http');
-var url = require('url');
-var fs = require('fs');
+//const https = require('https');
+const express = require('express');
+//var http = require('http');
+const url = require('url');
+const fs = require('fs');
 //var json = require('json');
 
-const selfUrl = "http://localhost:2000";
-const base = "/v1.0/";
+const selfUrl = "http://jmacura.ml";
+const base = "/api/v1.0/";
 const things = "Things";
 const locations = "Locations";
 const historicalLocations = "HistoricalLocations";
@@ -25,6 +27,11 @@ const sensors = "Sensors";
 const observedProperties = "ObservedProperties";
 const observations = "Observations";
 const featuresOfInterest = "FeaturesOfInterest";
+
+function allowedOrigin(origin) {
+  const origins = ['http://localhost:8080', 'http://localhost:2000', 'http://jmacura.ml', 'https://jmacura.ml', 'https://localhost:8080', 'https://localhost:2000'];
+  return origins.includes(origin);
+}
 
 /**
 * Thenable variant of reading list of files from a directory
@@ -45,8 +52,13 @@ function readFiles(dirname) {
 /**
 * Response to /v1.0/
 */
-function listImplementedCommands(res) {
-  res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:8080'});
+function listImplementedCommands(res, origin) {
+  res.writeHead(200, {
+    'Referrer-Policy': 'origin',
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Headers': 'referrer-policy',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true'});
   const describe = {
     "value": [
       {
@@ -74,7 +86,7 @@ function listImplementedCommands(res) {
 /**
 * Response to /v1.0/Datastreams
 */
-function listDatastreams(res) {
+function listDatastreams(res, origin) {
   readFiles("./observations/").then((list) => {
     let jsonList = list.map(x => {
       const name = x.split(".").slice(0,-1).join(".");
@@ -88,7 +100,12 @@ function listDatastreams(res) {
         "Thing@iot.navigationLink": selfLink + "/Thing"
       }
     });
-    res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:8080'});
+    res.writeHead(200, {
+      'Referrer-Policy': 'origin',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Headers': 'referrer-policy',
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true'});
     res.write(Buffer.from(JSON.stringify({
       "@iot.count": list.length,
       "value": jsonList
@@ -105,7 +122,7 @@ function listDatastreams(res) {
 /**
 * Response to /v1.0/Observations
 */
-function listObservations(res) {
+function listObservations(res, origin) {
   readFiles("./observations/").then((list) => {
     let jsonList = list.map(x => {
       const name = x.split(".").slice(0,-1).join(".");
@@ -118,7 +135,12 @@ function listObservations(res) {
         "FeatureOfInterest@iot.navigationLink": selfLink + "/FeatureOfInterest"
       }
     });
-    res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:8080'});
+    res.writeHead(200, {
+      'Referrer-Policy': 'origin',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Headers': 'referrer-policy',
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true'});
     res.write(Buffer.from(JSON.stringify({
       "@iot.count": list.length,
       "value": jsonList
@@ -135,7 +157,7 @@ function listObservations(res) {
 /**
 * Response to /v1.0/Things
 */
-function listAvailableZones(res) {
+function listAvailableZones(res, origin) {
   readFiles("./models/gltf/").then((list) => {
     let jsonList = list.map(x => {
       const name = x.split(".").slice(0,-1).join(".");
@@ -148,7 +170,12 @@ function listAvailableZones(res) {
         "Datastreams@iot.navigationLink": selfLink + "/Datastreams"
       }
     });
-    res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:8080'});
+    res.writeHead(200, {
+      'Referrer-Policy': 'origin',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Headers': 'referrer-policy',
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true'});
     res.write(Buffer.from(JSON.stringify({
       "@iot.count": list.length,
       "value": jsonList
@@ -165,14 +192,19 @@ function listAvailableZones(res) {
 /**
 * Response to /v1.0/Observations(id)
 */
-function getObservation(entity, res) {
+function getObservation(entity, res, origin) {
   var filename = "./observations/" + entity + ".json";
   fs.readFile(filename, function(err, data) {
     if (err) {
       res.writeHead(404, {'Content-Type': 'text/html'});
       return res.end("404 Not Found");
     }
-    res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'http://localhost:8080'});
+    res.writeHead(200, {
+      'Referrer-Policy': 'origin',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Headers': 'referrer-policy',
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true'});
     res.write(data);
     return res.end();
   });
@@ -181,7 +213,7 @@ function getObservation(entity, res) {
 /**
 * Response to any other SensorThing API request which is currently not implemented
 */
-function notImplemented(res) {
+function notImplemented(res, origin) {
   res.writeHead(501, {'Content-Type': 'text/html'})
   return res.end("501 Not Implemented");
 }
@@ -189,26 +221,40 @@ function notImplemented(res) {
 /**
 * The server setup
 */
-http.createServer(function (req, res) {
+/*const options = {
+  key: fs.readFileSync("/home/jm/client-key.pem"),
+  cert: fs.readFileSync("/home/jm/client-cert.pem")
+};*/
+
+var app = express();
+app.use(function (req, res) {
   let q = url.parse(req.url, true);
   let params = q.pathname.split("(");
+  //this is a workaround! #TODO: make work with req.headers.origin
+  let orig = req.headers.host;
+  //console.log("origin", orig);
   let command = params[0];
   let entity = params.length == 2 ? params[1].replace(")", "") : false;
-  if (command === base) {
-    listImplementedCommands(res);
+  /*if (!allowedOrigin(orig)) {
+    res.writeHead(403, {'Content-Type': 'text/html'});
+    return res.end("403 Origin forbiden");
+  } else*/ if (command === base) {
+    listImplementedCommands(res, orig);
   } else if (command === base + things && !entity) {
-    listAvailableZones(res);
+    listAvailableZones(res, orig);
   } else if (command === base + datastreams && !entity) {
-    listDatastreams(res);
+    listDatastreams(res, orig);
   } else if (command === base + observations && !entity) {
-    listObservations(res);
+    listObservations(res, orig);
   } else if (command === base + observations) {
-    getObservation(entity, res);
+    getObservation(entity, res, orig);
   } else if (command === base + sensors || command === base + observedProperties || command === base + featuresOfInterest ||
     command === base + locations || command === base + historicalLocations) {
-    notImplemented(res);
+    notImplemented(res, orig);
   } else {
     res.writeHead(400, {'Content-Type': 'text/html'});
-    return res.end("400 Bad Request");
+    return res.end("400 Bad Request: " + command);
   }
 }).listen(2000);
+
+//https.createServer(options, app).listen(2000);

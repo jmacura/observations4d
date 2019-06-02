@@ -15,6 +15,9 @@ var tMax = -Infinity;
 var startDate;
 var endDate;
 
+//for testing only
+var serviceUrl = window.location.hostname === "localhost" ? "http://localhost:2000/api/" : "https://jmacura.ml/api/";
+
 
 /**
  * getBaseHeight - A hook to position the rooms to the right height
@@ -60,15 +63,18 @@ function readKml(objectName) {
 'use strict';
 
 function readOM(objectName) {
-  let objUrl = "http://localhost:2000/v1.0/Observations(temperature_" + objectName + ")";
+  let objUrl = serviceUrl + "v1.0/Observations(temperature_" + objectName + ")";
   return new Promise(
     (resolve,reject) => {
       $.ajax({
         url: objUrl,
+        headers: {'Referrer-Policy': 'origin'},
         dataType: 'json',
         type: 'GET',
         async: true,
-        crossDomain: true
+        xhrFields: {
+          withCredentials: true
+        }
       }).done((data, stat) => {
         resolve(data);
       }).fail((error) => {
@@ -176,15 +182,18 @@ function generateCzmlItem(item) {
  * @return {Promise}  Promise, which resolves with the list of available zones
  */
 function getZoneList() {
-  let url = "http://localhost:2000/v1.0/Things";
+  let url = serviceUrl + "v1.0/Things";
   return new Promise(
     (resolve,reject) => {
       $.ajax({
         url: url,
+        headers: {'Referrer-Policy': 'origin'},
         dataType: 'json',
         type: 'GET',
         async: true,
-        crossDomain: true
+        xhrFields: {
+          withCredentials: true
+        }
       }).done((data, stat) => {
         console.log("OK! List of building zones loaded successfully.");
         resolve(data.value);
